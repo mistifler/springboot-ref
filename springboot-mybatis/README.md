@@ -1,6 +1,8 @@
 #Spring boot with Mybatis
+
 Spring boot 集成 Mybatis
-Mybatis generator自动生成mapper文件
+
+Mybatis generator自动生成插件的使用
 
 ## 引入依赖
 在pom文件中引入mybatis的starter
@@ -13,7 +15,7 @@ Mybatis generator自动生成mapper文件
 ```
 
 ## 使用Mybatis Generator
-在pom.xml中引入该插件的依赖
+首先，在pom.xml中引入该插件的依赖
 推荐这里配置下JDBC驱动的依赖(需要指定版本)，不然执行的时候可能会报错找不到JDBC Driver
 ```
 <plugin>
@@ -30,18 +32,20 @@ Mybatis generator自动生成mapper文件
 </plugin>
 ```
 
-书写配置文件
-具体参考generatorConfig.xml
+然后，书写配置文件，具体参考resources/mybatis-generator.xml
 
-执行
+最后，执行即可，可以考虑用IDEA的Maven插件。
 
-可能报错：
+可能出现的报错：
+
 元素类型为 "context" 的内容必须匹配 "(property*,plugin*,commentGenerator?,(connectionFactory|jdbcConnection),javaTypeResolver?,javaModelGenerator,sqlMapGenerator?,javaClientGenerator?,table+)"
+
 解决：
 配置的时候注意各个context里的子标签的顺序
 
+关于mybatis generator的更多配置可以参考: 
 
-
-参考: 
 http://www.mybatis.org/generator/
+
 http://www.mybatis.org/generator/reference/plugins.html
+
