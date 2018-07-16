@@ -23,7 +23,7 @@ import javax.servlet.http.HttpServletResponse;
 @Component
 public class ControllerAop {
 
-    public static final Logger logger = LoggerFactory.getLogger(ControllerAop.class);
+    private static final Logger logger = LoggerFactory.getLogger(ControllerAop.class);
 
     @Pointcut("execution(public * com.mistifler.demo.springbootaop.controller.*Controller.*(..))")
     public void pointCutMethod() {
