@@ -1,54 +1,73 @@
 package com.mistifler.demo.springboothttp.config;
 
 
+import org.apache.http.HttpHost;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
-import org.apache.http.config.Registry;
-import org.apache.http.config.RegistryBuilder;
-import org.apache.http.conn.socket.ConnectionSocketFactory;
-import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.conn.ssl.TrustStrategy;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
-import org.springframework.web.client.AsyncRestTemplate;
 import org.springframework.web.client.RestTemplate;
+
+import javax.net.ssl.SSLContext;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.X509Certificate;
 
 @Configuration
 public class RestTemplateConfig {
 
-    private static final int LONG_TIMEOUT = 25 * 1000;
+    @Bean("defaultRestTemplate")
+    public RestTemplate defaultRestTemplate() {
+        return new RestTemplate();
+    }
 
-    private static final int REQUEST_TIMEOUT = 30 * 1000;
+    private static final int CONNECT_TIMEOUT = 5 * 1000;
+    private static final int READ_TIMEOUT = 5 * 1000;
+    private static final int CONN_REQUEST_TIMEOUT = 2 * 1000;
+    private static final int POOL_MAX_TOTAL = 100;
+    private static final int POOL_MAX_PER_ROUTE = 10;
+    private static final String PROXY_ADDRESS = "http://xx.proxy.xx";
+    private static final int PROXY_PORT = 8888;
 
-    private static final int MAX_TOTAL = 100;
+    @Bean("restTemplate")
+    public RestTemplate restTemplate() {
+        HttpComponentsClientHttpRequestFactory httpRequestFactory = new HttpComponentsClientHttpRequestFactory();
+        //连接超时5s
+        httpRequestFactory.setConnectTimeout(CONNECT_TIMEOUT);
+        // 数据读取超时时间，即Socket Read Timeout
+        httpRequestFactory.setReadTimeout(READ_TIMEOUT);
+        // 连接不够用的等待时间，不宜过长，必须设置，比如连接不够用时，时间过长将是灾难性的，HttpClient默认-1
+        httpRequestFactory.setConnectionRequestTimeout(CONN_REQUEST_TIMEOUT);
+        // 缓冲请求数据，默认值是true。通过POST或者PUT大量发送数据时，建议将此属性更改为false，以免耗尽内存。
+        httpRequestFactory.setBufferRequestBody(false);
 
-    private static final int MAX_PER_ROUTE = 10;
+        return new RestTemplate(httpRequestFactory);
+    }
 
-    private static final int DEFAULT_CONN_REQUEST_TIMEOUT = 10000;
 
-    private static final int DEFAULT_TIMEOUT = 10 * 1000;
-
-    @Bean(name = "longtimeRestTemplate")
+    @Bean(name = "clientRestTemplate")
     public RestTemplate crawlerRestTemplate() {
-        Registry<ConnectionSocketFactory> registry = RegistryBuilder.<ConnectionSocketFactory>create()
-                .register("http", PlainConnectionSocketFactory.getSocketFactory())
-                .register("https", SSLConnectionSocketFactory.getSocketFactory())
-                .build();
 
         //连接池相关配置
-        PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager(registry);
-        connectionManager.setMaxTotal(MAX_TOTAL);
-        //该参数会对连接池按请求的host进行细分，默认为2
-        connectionManager.setDefaultMaxPerRoute(MAX_PER_ROUTE);
+        PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
+        connectionManager.setMaxTotal(POOL_MAX_TOTAL);
+        //该参数会对连接池按请求的host进行细分，默认为2。
+        connectionManager.setDefaultMaxPerRoute(POOL_MAX_PER_ROUTE);
 
         //request超时设置
         RequestConfig requestConfig = RequestConfig.custom()
-                .setSocketTimeout(LONG_TIMEOUT)
-                .setConnectTimeout(LONG_TIMEOUT)
-                .setConnectionRequestTimeout(REQUEST_TIMEOUT)
+                .setSocketTimeout(READ_TIMEOUT)
+                .setConnectTimeout(CONNECT_TIMEOUT)
+                .setConnectionRequestTimeout(CONN_REQUEST_TIMEOUT)
                 .build();
 
         //HttpClient配置, disableCookieManagement拒绝自动管理cookie
@@ -66,28 +85,48 @@ public class RestTemplateConfig {
     }
 
 
-    @Bean(name = "defaultRestTemplate")
-    public RestTemplate defaultRestTemplate() {
+    @Bean("proxyRestTemplate")
+    public RestTemplate proxyRestTemplate() {
+        PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
+        connectionManager.setMaxTotal(POOL_MAX_TOTAL);
+        connectionManager.setDefaultMaxPerRoute(POOL_MAX_PER_ROUTE);
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setSocketTimeout(READ_TIMEOUT)
+                .setConnectTimeout(CONNECT_TIMEOUT)
+                .setConnectionRequestTimeout(CONN_REQUEST_TIMEOUT)
+                .build();
 
-        //HttpComponentsClientHttpRequestFactory只设置RequestConfig会生成一个默认的HttpClient,SimpleClientHttpRequestFactory非连接池
-        HttpComponentsClientHttpRequestFactory httpRequestFactory = new HttpComponentsClientHttpRequestFactory();
+        HttpClient proxyClient = HttpClientBuilder.create()
+                .setDefaultRequestConfig(requestConfig)
+                .setConnectionManager(connectionManager)
+                .disableCookieManagement()
+                .setProxy(new HttpHost(PROXY_ADDRESS, PROXY_PORT))
+                .build();
 
-        // 连接超时10s，HttpClient默认-1
-        httpRequestFactory.setConnectTimeout(DEFAULT_TIMEOUT);
-        // 数据读取超时时间，即SocketTimeout，HttpClient默认-1
-        httpRequestFactory.setReadTimeout(DEFAULT_TIMEOUT);
-        // 连接不够用的等待时间，不宜过长，必须设置，比如连接不够用时，时间过长将是灾难性的，HttpClient默认-1
-        httpRequestFactory.setConnectionRequestTimeout(DEFAULT_CONN_REQUEST_TIMEOUT);
-        // 缓冲请求数据，默认值是true。通过POST或者PUT大量发送数据时，建议将此属性更改为false，以免耗尽内存。
-        // clientHttpRequestFactory.setBufferRequestBody(false);
-
-        return new RestTemplate(httpRequestFactory);
+        return new RestTemplate(new HttpComponentsClientHttpRequestFactory(proxyClient));
     }
 
-    @Bean
-    public AsyncRestTemplate asyncRestTemplate() {
-        return new AsyncRestTemplate();
-    }
+@Bean(name = "HttpsRestTemplate")
+public RestTemplate httpsRestTemplate() throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
+    TrustStrategy acceptingTrustStrategy = (X509Certificate[] chain, String authType) -> true;
 
+    SSLContext sslContext = org.apache.http.ssl.SSLContexts.custom()
+            .loadTrustMaterial(null, acceptingTrustStrategy)
+            .build();
 
+    //关闭域名验证
+    // SSLConnectionSocketFactory csf = new SSLConnectionSocketFactory(sslContext, NoopHostnameVerifier.INSTANCE);
+    SSLConnectionSocketFactory csf = new SSLConnectionSocketFactory(sslContext);
+
+    CloseableHttpClient httpClient = HttpClients.custom()
+            .setSSLSocketFactory(csf)
+            .build();
+
+    HttpComponentsClientHttpRequestFactory requestFactory =
+            new HttpComponentsClientHttpRequestFactory();
+
+    requestFactory.setHttpClient(httpClient);
+    RestTemplate restTemplate = new RestTemplate(requestFactory);
+    return restTemplate;
+}
 }
