@@ -17,6 +17,7 @@ Spring的配置信息可以放置在任何Resource接口可以访问到的地方
 
 # 资源加载机制
 不同资源类型必须使用相应的Resource实现类，比较麻烦，spring提供了加载资源的机制，可以通过classpath: file: http://  等资源地址前缀来自动进行识别，如果没有前缀，则根据对应类型的Resourceshixianlei 在此基础上，还支持Ant风格带通配符的资源地址。
+
 资源加载器，ResourceLoader仅有一个方法：Resource getResource(String location); 表示根据资源地址加载资源文件。
 
 ![Aaron Swartz](https://github.com/mistifler/Notes/blob/master/pictures/springboot-ref/springboot-resource/ResourceLoader.png)
