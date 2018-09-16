@@ -32,5 +32,9 @@ public class ResourceTest {
         }
         System.out.println(byteArrayOutputStream.toString());
 
+
+        String info = MessageUtil.getMessage("user.password.wrong");
+        System.out.println(info);
+
     }
 }
