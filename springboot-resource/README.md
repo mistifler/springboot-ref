@@ -1,4 +1,3 @@
-[TOC]
 # Resource接口
 Spring的Resource接口，提供了更强的底层资源访问能力。Spring框架使用Resource装载各种资源，包括配置文件资源、国际化属性文件资源等。下面是Resource接口定义的方法：
 
